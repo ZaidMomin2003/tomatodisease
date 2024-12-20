@@ -1,0 +1,11 @@
+0 Powdery_Mildew
+1 Healthy
+2 Tomato_mosaic_virus
+3 Tomato_yellow_leaf_curl_virus
+4 Tomato_Target_Spot
+5 Tomato_Spider_Mites
+6 Septoria_leaf_Spot
+7 Leaf_Mold
+8 Tomato_late_Blight
+9 Tomato_Early_Blight
+10 Tomato_bacterial_Spot
