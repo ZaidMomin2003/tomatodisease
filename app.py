@@ -2,9 +2,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import tensorflow as tf
-import requests
 import random
-import geocoder
 
 # Load the TensorFlow Lite model
 @st.cache_resource
@@ -52,26 +50,24 @@ disease_info = {
     'Tomato_bacterial_Spot': {'causes': "Caused by Xanthomonas species.", 'treatment': "Use copper-based bactericides and avoid overhead watering."}
 }
 
-# Get user's location
-def get_coordinates():
-    g = geocoder.ip('me')  # Gets user's current location
-    return g.latlng if g.latlng else [12.9716, 77.5946]  # Default to Bangalore if location not found
+# Simulate weather data for Bangalore
+def get_simulated_weather():
+    # Typical weather ranges in Bangalore
+    temperature = round(random.uniform(20, 35), 1)  # Temperature in Celsius
+    humidity = round(random.uniform(50, 80), 1)     # Humidity in percentage
+    return temperature, humidity
 
-# Fetch weather data based on location
-def fetch_weather_data(lat, lon):
-    api_key = "6f6609ceb6954f0d911162438241009"  # Replace with your Weather API key
-    url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={lat},{lon}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        temperature = data['current']['temp_c']
-        humidity = data['current']['humidity']
-        return temperature, humidity
-    else:
-        return None, None
+# Simulate soil data based on Bangalore's conditions
+def get_simulated_soil_data():
+    pH = round(random.uniform(5.5, 7.0), 2)  # Soil pH for Bangalore
+    npk = (round(random.uniform(15, 25), 1),  # Nitrogen (N)
+           round(random.uniform(10, 20), 1),  # Phosphorus (P)
+           round(random.uniform(10, 20), 1))  # Potassium (K)
+    moisture = round(random.uniform(50, 70), 1)  # Soil moisture in percentage
+    return pH, npk, moisture
 
-# Predict diseases based on conditions
-def predict_disease_based_on_conditions(temp, humidity, pH, moisture):
+# Function to predict diseases based on conditions
+def predict_disease_based_on_conditions(temp, humidity, pH, npk, moisture):
     diseases = []
     if pH < 5.5 and moisture > 60:
         diseases.append("Tomato_late_Blight")
@@ -83,20 +79,6 @@ def predict_disease_based_on_conditions(temp, humidity, pH, moisture):
 
 # Streamlit UI
 st.title("Tomato Disease Detection and Prediction Using ML")
-
-# Get user's coordinates
-coordinates = get_coordinates()
-latitude, longitude = coordinates[0], coordinates[1]
-st.write(f"**Your Coordinates:** {latitude}, {longitude}")
-
-# Fetch weather data
-temperature, humidity = fetch_weather_data(latitude, longitude)
-
-if temperature is None or humidity is None:
-    st.error("Failed to fetch weather data. Please check your API key or internet connection.")
-else:
-    st.write(f"**Current Temperature:** {temperature}°C")
-    st.write(f"**Current Humidity:** {humidity}%")
 
 # Upload image
 uploaded_file = st.file_uploader("Upload an image of the affected area...", type=["jpg", "png"])
@@ -112,32 +94,33 @@ if uploaded_file:
     output_data = interpreter.get_tensor(output_details[0]['index'])
     disease = decode_prediction(output_data)
     
-    st.header("Detection")
+    st.subheader("Detection")
     st.write(f"Disease Detected: **{disease}**")
     disease_details = disease_info.get(disease, {"causes": "No information available.", "treatment": ""})
     st.write(f"**Causes:** {disease_details['causes']}")
     st.write(f"**Treatment:** {disease_details['treatment']}")
 
-    # Simulate soil data similar to Bangalore
-    pH = round(random.uniform(5.5, 7.0), 2)
-    moisture = round(random.uniform(40, 70), 1)
+    # Simulate and display weather and soil conditions
+    temperature, humidity = get_simulated_weather()
+    pH, npk, moisture = get_simulated_soil_data()
 
-    # Prediction based on conditions
-    possible_diseases = predict_disease_based_on_conditions(temperature, humidity, pH, moisture)
+    st.subheader("Weather Conditions")
+    st.write(f"Temperature: {temperature}°C, Humidity: {humidity}%")
+    
+    st.subheader("Soil Conditions")
+    st.write(f"pH: {pH}, NPK: {npk}, Moisture: {moisture}%")
 
-    st.header("Prediction")
-    st.write(f"**Soil Conditions:**")
-    st.write(f"- pH Level: {pH}")
-    st.write(f"- Moisture: {moisture}%")
+    # Predict diseases based on conditions
+    possible_diseases = predict_disease_based_on_conditions(temperature, humidity, pH, npk, moisture)
+    
+    st.subheader("Prediction")
     st.write(f"**Possible Diseases Based on Conditions:** {', '.join(possible_diseases)}")
     for disease in possible_diseases:
         if disease in disease_info:
             st.write(f"**{disease} Treatment:** {disease_info[disease]['treatment']}")
             st.write(f"**{disease} Causes:** {disease_info[disease]['causes']}")
-
-    st.header("Personal Suggestion")
-    if disease != "Healthy":
-        st.write("Consider rotating crops or planting resistant varieties to minimize future risks.")
-        st.write("Alternative Crop Suggestion: **Chili Pepper**, which thrives in similar conditions and is less prone to the identified diseases.")
-    else:
-        st.write("Your tomato plant is healthy! Continue with proper care and monitoring to maintain its health.")
+    
+    # Personal suggestions and alternatives
+    st.subheader("Suggestions")
+    st.write("Consider crop rotation with resistant plants like spinach or lettuce to minimize future risks.")
+    st.write("Ensure proper ventilation, avoid overwatering, and use organic fertilizers for soil enrichment.")
